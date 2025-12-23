@@ -1,5 +1,5 @@
 --==============================
--- SERVICES
+-- SERVICES & VARIABLES
 --==============================
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -10,176 +10,190 @@ local player = Players.LocalPlayer
 local upgradeRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("UpgradeNPC")
 local collectRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("CollectCash")
 
---==============================
--- DATA & LOGIC
---==============================
-local enabledUpgrade = false
-local enabledCollect = false
-local enabledESP = false
+local enabledUpgrade, enabledCollect, enabledESP = false, false, false
 local flying = false
 local flySpeed = 50
 local NPC_IDS = {}
 local espObjects = {}
-_G.NPC_IDS = NPC_IDS
 
 --==============================
--- MODERN GUI CREATION
+-- GUI MAIN STRUCTURE
 --==============================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "MyzoarnHub_V3_Final"
+gui.Name = "MyzoarnTabs_V5_Rarity"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 280, 0, 420)
-frame.Position = UDim2.new(0.5, -140, 0.5, -210)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.Size = UDim2.new(0, 260, 0, 350)
+frame.Position = UDim2.new(0.5, -130, 0.5, -175)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
+Instance.new("UICorner", frame)
 
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
-local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(80, 80, 80)
-stroke.Thickness = 2
+-- TAB SYSTEM HEADERS
+local tabContainer = Instance.new("Frame", frame)
+tabContainer.Size = UDim2.new(1, 0, 0, 35)
+tabContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", tabContainer)
 
--- HEADER
-local header = Instance.new("TextLabel", frame)
-header.Size = UDim2.new(1, 0, 0, 40)
-header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-header.Text = "MYZOARN HUB V3 (MOBILE)"
-header.TextColor3 = Color3.new(1, 1, 1)
-header.Font = Enum.Font.GothamBold
-header.TextSize = 15
-Instance.new("UICorner", header)
+local function createTabBtn(name, pos)
+    local btn = Instance.new("TextButton", tabContainer)
+    btn.Size = UDim2.new(0.33, -4, 1, -4)
+    btn.Position = UDim2.new(pos, 2, 0, 2)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    Instance.new("UICorner", btn)
+    return btn
+end
 
--- CONTAINER
-local container = Instance.new("Frame", frame)
-container.Size = UDim2.new(1, -20, 1, -60)
-container.Position = UDim2.new(0, 10, 0, 50)
-container.BackgroundTransparency = 1
-local layout = Instance.new("UIListLayout", container)
-layout.Padding = UDim.new(0, 6)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local btnFarm = createTabBtn("FARMING", 0)
+local btnMove = createTabBtn("MOVE", 0.33)
+local btnEsp = createTabBtn("ESP MENU", 0.66)
 
--- STATUS
-local status = Instance.new("TextLabel", container)
-status.Size = UDim2.new(1, 0, 0, 20)
-status.BackgroundTransparency = 1
-status.TextColor3 = Color3.fromRGB(150, 150, 150)
-status.Font = Enum.Font.Gotham
-status.TextSize = 12
-status.Text = "Captured IDs: 0"
+-- PAGE CONTAINERS
+local pages = Instance.new("Frame", frame)
+pages.Size = UDim2.new(1, -20, 1, -50)
+pages.Position = UDim2.new(0, 10, 0, 45)
+pages.BackgroundTransparency = 1
 
--- BUTTON CREATOR
-local function createBtn(text, color)
-    local btn = Instance.new("TextButton", container)
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.BackgroundColor3 = color
-    btn.Text = text
+local function createPage()
+    local p = Instance.new("Frame", pages)
+    p.Size = UDim2.new(1, 0, 1, 0)
+    p.BackgroundTransparency = 1
+    p.Visible = false
+    local list = Instance.new("UIListLayout", p)
+    list.Padding = UDim.new(0, 5)
+    return p
+end
+
+local pageFarm = createPage()
+local pageMove = createPage()
+local pageEsp = createPage()
+pageFarm.Visible = true
+
+-- NAVIGATION
+local function showPage(target)
+    pageFarm.Visible = (target == pageFarm)
+    pageMove.Visible = (target == pageMove)
+    pageEsp.Visible = (target == pageEsp)
+end
+btnFarm.MouseButton1Click:Connect(function() showPage(pageFarm) end)
+btnMove.MouseButton1Click:Connect(function() showPage(pageMove) end)
+btnEsp.MouseButton1Click:Connect(function() showPage(pageEsp) end)
+
+-- UI HELPERS
+local function addToggle(parent, text, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    btn.Text = text .. ": OFF"
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    return btn
+    btn.TextSize = 11
+    Instance.new("UICorner", btn)
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = text .. (state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(40, 150, 60) or Color3.fromRGB(35, 35, 35)
+        callback(state)
+    end)
 end
-
-local toggleUpgrade = createBtn("Auto Upgrade: OFF", Color3.fromRGB(40, 40, 40))
-local toggleCollect = createBtn("Auto Collect: OFF", Color3.fromRGB(40, 40, 40))
-local toggleFly = createBtn("Fly Mode: OFF", Color3.fromRGB(40, 40, 40))
-local toggleESP = createBtn("Secret/God ESP: OFF", Color3.fromRGB(40, 40, 40))
-local clearBtn = createBtn("Clear NPC IDs", Color3.fromRGB(60, 30, 30))
-local hideBtn = createBtn("Minimize GUI", Color3.fromRGB(30, 30, 30))
-
--- FLY CONTROLS
-local flyControls = Instance.new("Frame", gui)
-flyControls.Size = UDim2.new(0, 60, 0, 130)
-flyControls.Position = UDim2.new(0.85, 0, 0.5, -65)
-flyControls.BackgroundTransparency = 1
-flyControls.Visible = false
-
-local function createFlyArrow(text, pos)
-    local btn = Instance.new("TextButton", flyControls)
-    btn.Size = UDim2.new(0, 55, 0, 55)
-    btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    btn.BackgroundTransparency = 0.5
-    btn.Text = text
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.TextSize = 30
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
-    return btn
-end
-local upBtn = createFlyArrow("↑", UDim2.new(0, 0, 0, 0))
-local downBtn = createFlyArrow("↓", UDim2.new(0, 0, 0, 65))
-
-local showBtn = Instance.new("TextButton", gui)
-showBtn.Size = UDim2.new(0, 60, 0, 60)
-showBtn.Position = UDim2.new(0, 20, 0.7, 0)
-showBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-showBtn.Text = "OPEN"
-showBtn.TextColor3 = Color3.new(1, 1, 1)
-showBtn.Visible = false
-Instance.new("UICorner", showBtn).CornerRadius = UDim.new(1, 0)
 
 --==============================
--- UPDATED SMART ESP LOGIC
+-- TAB 1: FARMING
 --==============================
-local function createESP(parent, rarityText)
-    local t = rarityText:lower()
-    local color = Color3.fromRGB(255, 255, 255)
-    
-    if t:find("god") then
-        color = Color3.fromRGB(255, 0, 0) -- Merah untuk God
-    elseif t:find("secret") then
-        color = Color3.fromRGB(255, 85, 255) -- Ungu untuk Secret
-    elseif t:find("brainrot") then
-        color = Color3.fromRGB(0, 255, 255) -- Cyan untuk Brainrot
-    end
-    
-    local box = Instance.new("BoxHandleAdornment")
-    box.Size = parent:GetExtentsSize()
-    box.Parent = parent
-    box.Adornee = parent
-    box.AlwaysOnTop = true
-    box.ZIndex = 10
-    box.Transparency = 0.4
-    box.Color3 = color
-    
-    local bb = Instance.new("BillboardGui", parent)
-    bb.Size = UDim2.new(0, 160, 0, 40)
-    bb.AlwaysOnTop = true
-    bb.StudsOffset = Vector3.new(0, 5, 0)
-    
-    local lbl = Instance.new("TextLabel", bb)
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "★ " .. rarityText:upper() .. " ★"
-    lbl.TextColor3 = color
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 15
-    lbl.TextStrokeTransparency = 0
+local statusLabel = Instance.new("TextLabel", pageFarm)
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Text = "Captured IDs: 0"
+statusLabel.TextColor3 = Color3.new(0.6, 0.6, 0.6)
+statusLabel.BackgroundTransparency = 1
 
-    table.insert(espObjects, {box, bb})
-end
+addToggle(pageFarm, "Auto Upgrade", function(s) enabledUpgrade = s end)
+addToggle(pageFarm, "Auto Collect", function(s) enabledCollect = s end)
 
-local function refreshESP()
+--==============================
+-- TAB 2: MOVEMENT
+--==============================
+addToggle(pageMove, "Fly Mode", function(s) 
+    flying = s 
+    gui.FlyControls.Visible = s
+    if s then startFly() end 
+end)
+
+--==============================
+-- TAB 3: ESP (4 KATEGORI)
+--==============================
+addToggle(pageEsp, "MASTER ESP", function(s) 
+    enabledESP = s 
+    refreshESP() 
+end)
+
+local info = Instance.new("TextLabel", pageEsp)
+info.Size = UDim2.new(1, 0, 0, 100)
+info.Text = "WARNA KATEGORI:\n🟡 Legendary (Kuning)\n🟠 Mythic (Oranye)\n🟣 Secret (Ungu)\n🔴 God (Merah)"
+info.TextColor3 = Color3.new(1, 1, 1)
+info.TextSize = 12
+info.Font = Enum.Font.GothamBold
+info.BackgroundTransparency = 1
+info.TextXAlignment = Enum.TextXAlignment.Left
+
+--==============================
+-- ESP LOGIC (MODIFIED FOR 4 RARITIES)
+--==============================
+function refreshESP()
     for _, obj in pairs(espObjects) do
-        if obj[1] then obj[1]:Destroy() end
-        if obj[2] then obj[2]:Destroy() end
+        pcall(function() obj[1]:Destroy() obj[2]:Destroy() end)
     end
     espObjects = {}
-
-    if enabledESP then
-        for _, v in pairs(workspace:GetDescendants()) do
-            -- Deteksi ID panjang dari gambar
-            if v:IsA("Model") and #v.Name > 20 then
-                for _, child in pairs(v:GetDescendants()) do
-                    if child:IsA("TextLabel") then
-                        local textValue = child.Text:lower()
-                        if textValue:find("god") or textValue:find("secret") or textValue:find("brainrot") then
-                            createESP(v, child.Text)
-                            break
-                        end
+    if not enabledESP then return end
+    
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and #v.Name > 20 then
+            for _, child in pairs(v:GetDescendants()) do
+                if child:IsA("TextLabel") then
+                    local t = child.Text:lower()
+                    local col = nil
+                    
+                    -- CEK 4 KATEGORI
+                    if t:find("god") then 
+                        col = Color3.fromRGB(255, 0, 0) -- RED
+                    elseif t:find("secret") then 
+                        col = Color3.fromRGB(170, 0, 255) -- PURPLE
+                    elseif t:find("myth") then 
+                        col = Color3.fromRGB(255, 120, 0) -- ORANGE
+                    elseif t:find("legend") then 
+                        col = Color3.fromRGB(255, 255, 0) -- YELLOW
+                    end
+                    
+                    if col then
+                        local box = Instance.new("BoxHandleAdornment", v)
+                        box.Size = v:GetExtentsSize()
+                        box.Adornee = v
+                        box.AlwaysOnTop = true
+                        box.ZIndex = 10
+                        box.Color3 = col
+                        box.Transparency = 0.5
+                        
+                        local bb = Instance.new("BillboardGui", v)
+                        bb.Size = UDim2.new(0,120,0,40)
+                        bb.AlwaysOnTop = true
+                        bb.StudsOffset = Vector3.new(0,5,0)
+                        local l = Instance.new("TextLabel", bb)
+                        l.Size = UDim2.new(1,0,1,0)
+                        l.Text = "★ " .. child.Text:upper() .. " ★"
+                        l.TextColor3 = col
+                        l.Font = Enum.Font.GothamBold
+                        l.TextSize = 14
+                        l.BackgroundTransparency = 1
+                        l.TextStrokeTransparency = 0
+                        table.insert(espObjects, {box, bb})
                     end
                 end
             end
@@ -188,17 +202,36 @@ local function refreshESP()
 end
 
 --==============================
--- FLY LOGIC
+-- FLY CONTROLS
 --==============================
-local movingUp, movingDown = false, false
-upBtn.MouseButton1Down:Connect(function() movingUp = true end)
-upBtn.MouseButton1Up:Connect(function() movingUp = false end)
-downBtn.MouseButton1Down:Connect(function() movingDown = true end)
-downBtn.MouseButton1Up:Connect(function() movingDown = false end)
+local flyCtrl = Instance.new("Frame", gui)
+flyCtrl.Name = "FlyControls"
+flyCtrl.Size = UDim2.new(0, 50, 0, 110)
+flyCtrl.Position = UDim2.new(0.9, -30, 0.5, -55)
+flyCtrl.BackgroundTransparency = 1
+flyCtrl.Visible = false
 
-local function startFly()
-    local char = player.Character
-    if not char then return end
+local function flyBtn(txt, y)
+    local b = Instance.new("TextButton", flyCtrl)
+    b.Size = UDim2.new(1, 0, 0, 50)
+    b.Position = UDim2.new(0, 0, 0, y)
+    b.Text = txt
+    b.BackgroundColor3 = Color3.new(0,0,0)
+    b.BackgroundTransparency = 0.5
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b)
+    return b
+end
+local upB = flyBtn("↑", 0)
+local downB = flyBtn("↓", 60)
+local mvUp, mvDown = false, false
+upB.MouseButton1Down:Connect(function() mvUp = true end)
+upB.MouseButton1Up:Connect(function() mvUp = false end)
+downB.MouseButton1Down:Connect(function() mvDown = true end)
+downB.MouseButton1Up:Connect(function() mvDown = false end)
+
+function startFly()
+    local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
     local bg = Instance.new("BodyGyro", hrp)
@@ -209,7 +242,7 @@ local function startFly()
     task.spawn(function()
         while flying and char.Parent do
             local dir = hum.MoveDirection
-            local v = movingUp and 1 or (movingDown and -1 or 0)
+            local v = mvUp and 1 or (mvDown and -1 or 0)
             bv.Velocity = (dir * flySpeed) + (Vector3.new(0, v, 0) * flySpeed)
             bg.CFrame = workspace.CurrentCamera.CFrame
             RunService.RenderStepped:Wait()
@@ -219,62 +252,12 @@ local function startFly()
 end
 
 --==============================
--- ANTI-AFK
---==============================
-player.Idled:Connect(function()
-    game:GetService("VirtualUser"):Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    task.wait(0.5)
-    game:GetService("VirtualUser"):Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-end)
-
---==============================
--- BUTTON ACTIONS
---==============================
-toggleESP.MouseButton1Click:Connect(function()
-    enabledESP = not enabledESP
-    toggleESP.Text = enabledESP and "ESP: ON (SCANNING)" or "ESP: OFF"
-    TweenService:Create(toggleESP, TweenInfo.new(0.3), {BackgroundColor3 = enabledESP and Color3.fromRGB(40, 120, 60) or Color3.fromRGB(40, 40, 40)}):Play()
-    refreshESP()
-end)
-
-task.spawn(function()
-    while task.wait(5) do
-        if enabledESP then refreshESP() end
-    end
-end)
-
-toggleFly.MouseButton1Click:Connect(function()
-    flying = not flying
-    flyControls.Visible = flying
-    toggleFly.Text = flying and "Fly: ON" or "Fly: OFF"
-    TweenService:Create(toggleFly, TweenInfo.new(0.3), {BackgroundColor3 = flying and Color3.fromRGB(40, 120, 60) or Color3.fromRGB(40, 40, 40)}):Play()
-    if flying then startFly() end
-end)
-
-toggleUpgrade.MouseButton1Click:Connect(function()
-    enabledUpgrade = not enabledUpgrade
-    toggleUpgrade.Text = enabledUpgrade and "Upgrade: ON" or "Upgrade: OFF"
-    TweenService:Create(toggleUpgrade, TweenInfo.new(0.3), {BackgroundColor3 = enabledUpgrade and Color3.fromRGB(40, 120, 60) or Color3.fromRGB(40, 40, 40)}):Play()
-end)
-
-toggleCollect.MouseButton1Click:Connect(function()
-    enabledCollect = not enabledCollect
-    toggleCollect.Text = enabledCollect and "Collect: ON" or "Collect: OFF"
-    TweenService:Create(toggleCollect, TweenInfo.new(0.3), {BackgroundColor3 = enabledCollect and Color3.fromRGB(40, 120, 60) or Color3.fromRGB(40, 40, 40)}):Play()
-end)
-
-clearBtn.MouseButton1Click:Connect(function() table.clear(NPC_IDS) status.Text = "Captured IDs: 0" end)
-hideBtn.MouseButton1Click:Connect(function() frame.Visible = false showBtn.Visible = true end)
-showBtn.MouseButton1Click:Connect(function() frame.Visible = true showBtn.Visible = false end)
-
---==============================
 -- CORE LOOPS
 --==============================
 task.spawn(function()
     while task.wait(0.1) do
         if enabledUpgrade then
             for _, id in ipairs(NPC_IDS) do
-                if not enabledUpgrade then break end
                 pcall(function() upgradeRemote:InvokeServer(id) end)
             end
         end
@@ -282,22 +265,52 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(10) do -- Interval dipercepat menjadi 10 detik
+    while task.wait(10) do
         if enabledCollect then
             for i = 1, 30 do pcall(function() collectRemote:FireServer(i) end) end
         end
     end
 end)
 
+task.spawn(function()
+    while task.wait(5) do if enabledESP then refreshESP() end end
+end)
+
+-- MINIMIZE
+local minBtn = Instance.new("TextButton", gui)
+minBtn.Size = UDim2.new(0, 50, 0, 50)
+minBtn.Position = UDim2.new(0, 10, 0.5, 0)
+minBtn.Text = "MENU"
+minBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+minBtn.TextColor3 = Color3.new(1,1,1)
+minBtn.Visible = false
+Instance.new("UICorner", minBtn, {CornerRadius = UDim.new(1, 0)})
+
+local hideMain = Instance.new("TextButton", frame)
+hideMain.Size = UDim2.new(0, 20, 0, 20)
+hideMain.Position = UDim2.new(1, -25, 0, 5)
+hideMain.Text = "-"
+hideMain.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
+hideMain.TextColor3 = Color3.new(1,1,1)
+
+hideMain.MouseButton1Click:Connect(function() frame.Visible = false minBtn.Visible = true end)
+minBtn.MouseButton1Click:Connect(function() frame.Visible = true minBtn.Visible = false end)
+
+-- REMOTE HOOK
 local oldNc
 oldNc = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
-    local method = getnamecallmethod()
-    if self == upgradeRemote and method == "InvokeServer" then
+    if self == upgradeRemote and getnamecallmethod() == "InvokeServer" then
         if typeof(args[1]) == "string" and not table.find(NPC_IDS, args[1]) then
             table.insert(NPC_IDS, args[1])
-            status.Text = "Captured IDs: " .. #NPC_IDS
+            statusLabel.Text = "Captured IDs: " .. #NPC_IDS
         end
     end
     return oldNc(self, ...)
+end)
+
+-- ANTI-AFK
+player.Idled:Connect(function()
+    game:GetService("VirtualUser"):CaptureController()
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
 end)
