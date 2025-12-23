@@ -162,7 +162,7 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(30) do
         if not enabledCollect then continue end
         for i = 1, 30 do
             pcall(function()
