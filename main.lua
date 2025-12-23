@@ -3,13 +3,14 @@
 --==============================
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local upgradeRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("UpgradeNPC")
 local collectRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("CollectCash")
 
 --==============================
--- DATA
+-- DATA & LOGIC
 --==============================
 local enabledUpgrade = false
 local enabledCollect = false
@@ -17,166 +18,178 @@ local NPC_IDS = {}
 _G.NPC_IDS = NPC_IDS
 
 --==============================
--- GUI ROOT
+-- MODERN GUI CREATION
 --==============================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.Name = "ModernAutoFarm"
 gui.ResetOnSpawn = false
 
 -- MAIN FRAME
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,300,0,350)
-frame.Position = UDim2.new(0.5,-150,0.5,-175)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.Size = UDim2.new(0, 280, 0, 320)
+frame.Position = UDim2.new(0.5, -140, 0.5, -160)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 
--- TITLE
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,35)
-title.BackgroundColor3 = Color3.fromRGB(20,20,20)
-title.Text = "AUTO UPGRADE & COLLECT MYZOARN"
-title.TextColor3 = Color3.new(1,1,1)
-title.TextScaled = true
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 10)
 
--- STATUS
-local status = Instance.new("TextLabel", frame)
-status.Size = UDim2.new(1,-20,0,25)
-status.Position = UDim2.new(0,10,0,45)
+-- DROP SHADOW (Glow effect)
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(60, 60, 60)
+stroke.Thickness = 2
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+-- HEADER
+local header = Instance.new("TextLabel", frame)
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+header.Text = "MYZOARN HUB"
+header.TextColor3 = Color3.new(1, 1, 1)
+header.Font = Enum.Font.GothamBold
+header.TextSize = 16
+
+local headerCorner = Instance.new("UICorner", header)
+headerCorner.CornerRadius = UDim.new(0, 10)
+
+-- CONTAINER FOR BUTTONS
+local container = Instance.new("Frame", frame)
+container.Size = UDim2.new(1, -20, 1, -60)
+container.Position = UDim2.new(0, 10, 0, 50)
+container.BackgroundTransparency = 1
+
+local layout = Instance.new("UIListLayout", container)
+layout.Padding = UDim.new(0, 8)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- STATUS LABEL
+local status = Instance.new("TextLabel", container)
+status.Size = UDim2.new(1, 0, 0, 25)
 status.BackgroundTransparency = 1
-status.TextColor3 = Color3.fromRGB(200,200,200)
-status.TextScaled = true
-status.Text = "Total NPC ID: 0"
+status.TextColor3 = Color3.fromRGB(150, 150, 150)
+status.Font = Enum.Font.Gotham
+status.TextSize = 13
+status.Text = "Captured IDs: 0"
 
--- TOGGLE AUTO UPGRADE
-local toggleUpgrade = Instance.new("TextButton", frame)
-toggleUpgrade.Size = UDim2.new(1,-20,0,40)
-toggleUpgrade.Position = UDim2.new(0,10,0,75)
-toggleUpgrade.Text = "AUTO UPGRADE : OFF"
-toggleUpgrade.TextScaled = true
-toggleUpgrade.BackgroundColor3 = Color3.fromRGB(120,40,40)
-toggleUpgrade.TextColor3 = Color3.new(1,1,1)
+-- HELPER FUNCTION FOR BUTTONS
+local function createModernBtn(text, color)
+    local btn = Instance.new("TextButton", container)
+    btn.Size = UDim2.new(1, 0, 0, 45)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.AutoButtonColor = true
+    
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    
+    return btn
+end
 
--- TOGGLE AUTO COLLECT
-local toggleCollect = Instance.new("TextButton", frame)
-toggleCollect.Size = UDim2.new(1,-20,0,40)
-toggleCollect.Position = UDim2.new(0,10,0,120)
-toggleCollect.Text = "AUTO COLLECT : OFF"
-toggleCollect.TextScaled = true
-toggleCollect.BackgroundColor3 = Color3.fromRGB(120,40,40)
-toggleCollect.TextColor3 = Color3.new(1,1,1)
+local toggleUpgrade = createModernBtn("Auto Upgrade: OFF", Color3.fromRGB(45, 45, 45))
+local toggleCollect = createModernBtn("Auto Collect: OFF", Color3.fromRGB(45, 45, 45))
+local clearBtn = createModernBtn("Clear NPC IDs", Color3.fromRGB(70, 30, 30))
+local hideBtn = createModernBtn("Minimize GUI", Color3.fromRGB(35, 35, 35))
 
--- CLEAR ID
-local clear = Instance.new("TextButton", frame)
-clear.Size = UDim2.new(1,-20,0,35)
-clear.Position = UDim2.new(0,10,0,165)
-clear.Text = "CLEAR NPC ID"
-clear.TextScaled = true
-clear.BackgroundColor3 = Color3.fromRGB(80,40,40)
-clear.TextColor3 = Color3.new(1,1,1)
-
--- HIDE GUI
-local hideBtn = Instance.new("TextButton", frame)
-hideBtn.Size = UDim2.new(1,-20,0,30)
-hideBtn.Position = UDim2.new(0,10,0,205)
-hideBtn.Text = "HIDE GUI"
-hideBtn.TextScaled = true
-hideBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-hideBtn.TextColor3 = Color3.new(1,1,1)
-
--- SHOW FLOATING
+-- FLOATING OPEN BUTTON
 local showBtn = Instance.new("TextButton", gui)
-showBtn.Size = UDim2.new(0,80,0,35)
-showBtn.Position = UDim2.new(0,20,0.5,0)
-showBtn.Text = "SHOW"
-showBtn.TextScaled = true
-showBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-showBtn.TextColor3 = Color3.new(1,1,1)
+showBtn.Size = UDim2.new(0, 60, 0, 60)
+showBtn.Position = UDim2.new(0, 20, 0.8, 0)
+showBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+showBtn.Text = "OPEN"
+showBtn.TextColor3 = Color3.new(1, 1, 1)
+showBtn.Font = Enum.Font.GothamBold
 showBtn.Visible = false
-showBtn.Active = true
-showBtn.Draggable = true
+
+local showCorner = Instance.new("UICorner", showBtn)
+showCorner.CornerRadius = UDim.new(1, 0) -- Circle
 
 --==============================
--- FUNCTIONS
+-- FUNCTIONS & LOGIC
 --==============================
 local function updateStatus()
-	status.Text = "Total NPC ID: "..#NPC_IDS
+    status.Text = "Captured IDs: " .. #NPC_IDS
 end
 
 toggleUpgrade.MouseButton1Click:Connect(function()
-	enabledUpgrade = not enabledUpgrade
-	toggleUpgrade.Text = enabledUpgrade and "AUTO UPGRADE : ON" or "AUTO UPGRADE : OFF"
-	toggleUpgrade.BackgroundColor3 = enabledUpgrade and Color3.fromRGB(40,120,40) or Color3.fromRGB(120,40,40)
+    enabledUpgrade = not enabledUpgrade
+    toggleUpgrade.Text = enabledUpgrade and "Auto Upgrade: ON" or "Auto Upgrade: OFF"
+    TweenService:Create(toggleUpgrade, TweenInfo.new(0.3), {
+        BackgroundColor3 = enabledUpgrade and Color3.fromRGB(40, 120, 60) or Color3.fromRGB(45, 45, 45)
+    }):Play()
 end)
 
 toggleCollect.MouseButton1Click:Connect(function()
-	enabledCollect = not enabledCollect
-	toggleCollect.Text = enabledCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
-	toggleCollect.BackgroundColor3 = enabledCollect and Color3.fromRGB(40,120,40) or Color3.fromRGB(120,40,40)
+    enabledCollect = not enabledCollect
+    toggleCollect.Text = enabledCollect and "Auto Collect: ON" or "Auto Collect: OFF"
+    TweenService:Create(toggleCollect, TweenInfo.new(0.3), {
+        BackgroundColor3 = enabledCollect and Color3.fromRGB(40, 120, 60) or Color3.fromRGB(45, 45, 45)
+    }):Play()
 end)
 
-clear.MouseButton1Click:Connect(function()
-	table.clear(NPC_IDS)
-	updateStatus()
+clearBtn.MouseButton1Click:Connect(function()
+    table.clear(NPC_IDS)
+    updateStatus()
 end)
 
 hideBtn.MouseButton1Click:Connect(function()
-	frame.Visible = false
-	showBtn.Visible = true
+    frame.Visible = false
+    showBtn.Visible = true
 end)
 
 showBtn.MouseButton1Click:Connect(function()
-	frame.Visible = true
-	showBtn.Visible = false
+    frame.Visible = true
+    showBtn.Visible = false
 end)
 
 --==============================
--- AUTO UPGRADE LOOP
+-- LOOPS (CORE LOGIC)
 --==============================
 task.spawn(function()
-	while task.wait(0.1) do
-		if not enabledUpgrade then continue end
-		for _,id in ipairs(NPC_IDS) do
-			if not enabledUpgrade then break end
-			pcall(function()
-				upgradeRemote:InvokeServer(id)
-			end)
-		end
-	end
+    while task.wait(0.1) do
+        if not enabledUpgrade then continue end
+        for _, id in ipairs(NPC_IDS) do
+            if not enabledUpgrade then break end
+            pcall(function()
+                upgradeRemote:InvokeServer(id)
+            end)
+        end
+    end
 end)
 
---==============================
--- AUTO COLLECT LOOP
---==============================
 task.spawn(function()
-	while task.wait(30) do
-		if not enabledCollect then continue end
-		for i = 1,30 do
-			pcall(function()
-				collectRemote:FireServer(i)
-			end)
-		end
-	end
+    while task.wait(0.3) do
+        if not enabledCollect then continue end
+        for i = 1, 30 do
+            pcall(function()
+                collectRemote:FireServer(i)
+            end)
+        end
+    end
 end)
 
 --==============================
--- REMOTE SPY (AUTO CAPTURE ID)
+-- REMOTE SPY (HOOK)
 --==============================
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-	local args = {...}
-	local method = getnamecallmethod()
+    local args = {...}
+    local method = getnamecallmethod()
 
-	if self == upgradeRemote and method == "InvokeServer" then
-		local npcId = args[1]
-		if typeof(npcId) == "string" then
-			if not table.find(NPC_IDS, npcId) then
-				table.insert(NPC_IDS, npcId)
-				updateStatus()
-				warn("[CAPTURED NPC ID]:", npcId)
-			end
-		end
-	end
+    if self == upgradeRemote and method == "InvokeServer" then
+        local npcId = args[1]
+        if typeof(npcId) == "string" then
+            if not table.find(NPC_IDS, npcId) then
+                table.insert(NPC_IDS, npcId)
+                updateStatus()
+                warn("[CAPTURED NPC ID]:", npcId)
+            end
+        end
+    end
 
-	return oldNamecall(self, ...)
+    return oldNamecall(self, ...)
 end)
