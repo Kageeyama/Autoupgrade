@@ -10,22 +10,26 @@ local player = Players.LocalPlayer
 local upgradeRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("UpgradeNPC")
 local collectRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("CollectCash")
 
+-- Global Settings
 local enabledUpgrade, enabledCollect, enabledESP = false, false, false
 local flying = false
 local flySpeed = 50
 local NPC_IDS = {}
 local espObjects = {}
 
+-- ESP Category Toggles
+local showLegendary, showMythic, showSecret, showGod = true, true, true, true
+
 --==============================
 -- GUI MAIN STRUCTURE
 --==============================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "MyzoarnTabs_V5_Rarity"
+gui.Name = "MyzoarnTabs_V6_CustomESP"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 350)
-frame.Position = UDim2.new(0.5, -130, 0.5, -175)
+frame.Size = UDim2.new(0, 260, 0, 400) -- Ukuran sedikit lebih panjang untuk list ESP
+frame.Position = UDim2.new(0.5, -130, 0.5, -200)
 frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -87,23 +91,25 @@ btnMove.MouseButton1Click:Connect(function() showPage(pageMove) end)
 btnEsp.MouseButton1Click:Connect(function() showPage(pageEsp) end)
 
 -- UI HELPERS
-local function addToggle(parent, text, callback)
+local function addToggle(parent, text, default, colorOn, callback)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, 0, 0, 32)
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    btn.Text = text .. ": OFF"
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = default and colorOn or Color3.fromRGB(35, 35, 35)
+    btn.Text = text .. (default and ": ON" or ": OFF")
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.GothamMedium
     btn.TextSize = 11
     Instance.new("UICorner", btn)
     
-    local state = false
+    local state = default
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = text .. (state and ": ON" or ": OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(40, 150, 60) or Color3.fromRGB(35, 35, 35)
+        btn.BackgroundColor3 = state and colorOn or Color3.fromRGB(35, 35, 35)
         callback(state)
+        if enabledESP then refreshESP() end
     end)
+    return btn
 end
 
 --==============================
@@ -112,40 +118,49 @@ end
 local statusLabel = Instance.new("TextLabel", pageFarm)
 statusLabel.Size = UDim2.new(1, 0, 0, 20)
 statusLabel.Text = "Captured IDs: 0"
-statusLabel.TextColor3 = Color3.new(0.6, 0.6, 0.6)
+statusLabel.TextColor3 = Color3.new(0.8,0.8,0.8)
 statusLabel.BackgroundTransparency = 1
 
-addToggle(pageFarm, "Auto Upgrade", function(s) enabledUpgrade = s end)
-addToggle(pageFarm, "Auto Collect", function(s) enabledCollect = s end)
+local clrBtn = Instance.new("TextButton", pageFarm)
+clrBtn.Size = UDim2.new(1, 0, 0, 30)
+clrBtn.Text = "CLEAR CAPTURED DATA"
+clrBtn.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
+clrBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", clrBtn)
+clrBtn.MouseButton1Click:Connect(function() table.clear(NPC_IDS) statusLabel.Text = "Captured IDs: 0" end)
+
+addToggle(pageFarm, "Auto Upgrade", false, Color3.fromRGB(40, 150, 60), function(s) enabledUpgrade = s end)
+addToggle(pageFarm, "Auto Collect", false, Color3.fromRGB(40, 150, 60), function(s) enabledCollect = s end)
 
 --==============================
 -- TAB 2: MOVEMENT
 --==============================
-addToggle(pageMove, "Fly Mode", function(s) 
+addToggle(pageMove, "Fly Mode", false, Color3.fromRGB(40, 150, 60), function(s) 
     flying = s 
     gui.FlyControls.Visible = s
     if s then startFly() end 
 end)
 
 --==============================
--- TAB 3: ESP (4 KATEGORI)
+-- TAB 3: ESP (WITH INDIVIDUAL TOGGLES)
 --==============================
-addToggle(pageEsp, "MASTER ESP", function(s) 
+addToggle(pageEsp, "MASTER ESP", false, Color3.fromRGB(100, 100, 200), function(s) 
     enabledESP = s 
     refreshESP() 
 end)
 
-local info = Instance.new("TextLabel", pageEsp)
-info.Size = UDim2.new(1, 0, 0, 100)
-info.Text = "WARNA KATEGORI:\n🟡 Legendary (Kuning)\n🟠 Mythic (Oranye)\n🟣 Secret (Ungu)\n🔴 God (Merah)"
-info.TextColor3 = Color3.new(1, 1, 1)
-info.TextSize = 12
-info.Font = Enum.Font.GothamBold
-info.BackgroundTransparency = 1
-info.TextXAlignment = Enum.TextXAlignment.Left
+local line = Instance.new("Frame", pageEsp)
+line.Size = UDim2.new(1, 0, 0, 2)
+line.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+line.BorderSizePixel = 0
+
+addToggle(pageEsp, "Legendary (Kuning)", true, Color3.fromRGB(180, 180, 0), function(s) showLegendary = s end)
+addToggle(pageEsp, "Mythic (Oranye)", true, Color3.fromRGB(180, 90, 0), function(s) showMythic = s end)
+addToggle(pageEsp, "Secret (Ungu)", true, Color3.fromRGB(130, 0, 180), function(s) showSecret = s end)
+addToggle(pageEsp, "God (Merah)", true, Color3.fromRGB(180, 0, 0), function(s) showGod = s end)
 
 --==============================
--- ESP LOGIC (MODIFIED FOR 4 RARITIES)
+-- ESP LOGIC
 --==============================
 function refreshESP()
     for _, obj in pairs(espObjects) do
@@ -161,16 +176,10 @@ function refreshESP()
                     local t = child.Text:lower()
                     local col = nil
                     
-                    -- CEK 4 KATEGORI
-                    if t:find("god") then 
-                        col = Color3.fromRGB(255, 0, 0) -- RED
-                    elseif t:find("secret") then 
-                        col = Color3.fromRGB(170, 0, 255) -- PURPLE
-                    elseif t:find("myth") then 
-                        col = Color3.fromRGB(255, 120, 0) -- ORANGE
-                    elseif t:find("legend") then 
-                        col = Color3.fromRGB(255, 255, 0) -- YELLOW
-                    end
+                    if t:find("god") and showGod then col = Color3.fromRGB(255, 0, 0)
+                    elseif t:find("secret") and showSecret then col = Color3.fromRGB(170, 0, 255)
+                    elseif t:find("myth") and showMythic then col = Color3.fromRGB(255, 120, 0)
+                    elseif t:find("legend") and showLegendary then col = Color3.fromRGB(255, 255, 0) end
                     
                     if col then
                         local box = Instance.new("BoxHandleAdornment", v)
@@ -202,7 +211,7 @@ function refreshESP()
 end
 
 --==============================
--- FLY CONTROLS
+-- FLY CONTROLS & LOGIC
 --==============================
 local flyCtrl = Instance.new("Frame", gui)
 flyCtrl.Name = "FlyControls"
@@ -252,14 +261,12 @@ function startFly()
 end
 
 --==============================
--- CORE LOOPS
+-- LOOPS
 --==============================
 task.spawn(function()
     while task.wait(0.1) do
         if enabledUpgrade then
-            for _, id in ipairs(NPC_IDS) do
-                pcall(function() upgradeRemote:InvokeServer(id) end)
-            end
+            for _, id in ipairs(NPC_IDS) do pcall(function() upgradeRemote:InvokeServer(id) end) end
         end
     end
 end)
@@ -292,7 +299,6 @@ hideMain.Position = UDim2.new(1, -25, 0, 5)
 hideMain.Text = "-"
 hideMain.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
 hideMain.TextColor3 = Color3.new(1,1,1)
-
 hideMain.MouseButton1Click:Connect(function() frame.Visible = false minBtn.Visible = true end)
 minBtn.MouseButton1Click:Connect(function() frame.Visible = true minBtn.Visible = false end)
 
@@ -309,7 +315,7 @@ oldNc = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNc(self, ...)
 end)
 
--- ANTI-AFK
+-- Anti-AFK
 player.Idled:Connect(function()
     game:GetService("VirtualUser"):CaptureController()
     game:GetService("VirtualUser"):ClickButton2(Vector2.new())
