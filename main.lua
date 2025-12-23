@@ -120,13 +120,21 @@ showBtn.Text = "OPEN"
 showBtn.TextColor3 = Color3.new(1, 1, 1)
 showBtn.Visible = false
 Instance.new("UICorner", showBtn).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", showBtn).Color = Color3.new(1,1,1)
 
 --==============================
--- SMART ESP LOGIC (BY RARITY)
+-- UPDATED SMART ESP LOGIC
 --==============================
 local function createESP(parent, rarityText)
-    local color = rarityText:lower():find("god") and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 0, 255)
+    local t = rarityText:lower()
+    local color = Color3.fromRGB(255, 255, 255)
+    
+    if t:find("god") then
+        color = Color3.fromRGB(255, 0, 0) -- Merah untuk God
+    elseif t:find("secret") then
+        color = Color3.fromRGB(255, 85, 255) -- Ungu untuk Secret
+    elseif t:find("brainrot") then
+        color = Color3.fromRGB(0, 255, 255) -- Cyan untuk Brainrot
+    end
     
     local box = Instance.new("BoxHandleAdornment")
     box.Size = parent:GetExtentsSize()
@@ -140,7 +148,7 @@ local function createESP(parent, rarityText)
     local bb = Instance.new("BillboardGui", parent)
     bb.Size = UDim2.new(0, 160, 0, 40)
     bb.AlwaysOnTop = true
-    bb.StudsOffset = Vector3.new(0, 4, 0)
+    bb.StudsOffset = Vector3.new(0, 5, 0)
     
     local lbl = Instance.new("TextLabel", bb)
     lbl.Size = UDim2.new(1, 0, 1, 0)
@@ -148,7 +156,7 @@ local function createESP(parent, rarityText)
     lbl.Text = "★ " .. rarityText:upper() .. " ★"
     lbl.TextColor3 = color
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 14
+    lbl.TextSize = 15
     lbl.TextStrokeTransparency = 0
 
     table.insert(espObjects, {box, bb})
@@ -163,12 +171,12 @@ local function refreshESP()
 
     if enabledESP then
         for _, v in pairs(workspace:GetDescendants()) do
-            -- Filter NPC berdasarkan ID panjang
+            -- Deteksi ID panjang dari gambar
             if v:IsA("Model") and #v.Name > 20 then
                 for _, child in pairs(v:GetDescendants()) do
                     if child:IsA("TextLabel") then
-                        local t = child.Text:lower()
-                        if t:find("god") or t:find("secret") or t:find("brainrot") then
+                        local textValue = child.Text:lower()
+                        if textValue:find("god") or textValue:find("secret") or textValue:find("brainrot") then
                             createESP(v, child.Text)
                             break
                         end
@@ -229,7 +237,6 @@ toggleESP.MouseButton1Click:Connect(function()
     refreshESP()
 end)
 
--- Loop Auto Refresh ESP setiap 5 detik agar NPC baru terdeteksi
 task.spawn(function()
     while task.wait(5) do
         if enabledESP then refreshESP() end
@@ -261,7 +268,7 @@ hideBtn.MouseButton1Click:Connect(function() frame.Visible = false showBtn.Visib
 showBtn.MouseButton1Click:Connect(function() frame.Visible = true showBtn.Visible = false end)
 
 --==============================
--- CORE LOOPS & HOOK
+-- CORE LOOPS
 --==============================
 task.spawn(function()
     while task.wait(0.1) do
@@ -275,7 +282,7 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(30) do
+    while task.wait(10) do -- Interval dipercepat menjadi 10 detik
         if enabledCollect then
             for i = 1, 30 do pcall(function() collectRemote:FireServer(i) end) end
         end
