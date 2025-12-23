@@ -3,8 +3,6 @@
 --==============================
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local upgradeRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("UpgradeNPC")
@@ -15,11 +13,8 @@ local collectRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChi
 --==============================
 local enabledUpgrade = false
 local enabledCollect = false
-local enabledFly = false
 local NPC_IDS = {}
 _G.NPC_IDS = NPC_IDS
-local speed = 50
-local direction = Vector3.new()
 
 --==============================
 -- GUI ROOT
@@ -29,8 +24,8 @@ gui.ResetOnSpawn = false
 
 -- MAIN FRAME
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,300,0,400)
-frame.Position = UDim2.new(0.5,-150,0.5,-200)
+frame.Size = UDim2.new(0,300,0,350)
+frame.Position = UDim2.new(0.5,-150,0.5,-175)
 frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -71,23 +66,35 @@ toggleCollect.TextScaled = true
 toggleCollect.BackgroundColor3 = Color3.fromRGB(120,40,40)
 toggleCollect.TextColor3 = Color3.new(1,1,1)
 
--- TOGGLE FLY
-local toggleFly = Instance.new("TextButton", frame)
-toggleFly.Size = UDim2.new(1,-20,0,40)
-toggleFly.Position = UDim2.new(0,10,0,165)
-toggleFly.Text = "FLY : OFF"
-toggleFly.TextScaled = true
-toggleFly.BackgroundColor3 = Color3.fromRGB(120,40,40)
-toggleFly.TextColor3 = Color3.new(1,1,1)
-
 -- CLEAR ID
 local clear = Instance.new("TextButton", frame)
 clear.Size = UDim2.new(1,-20,0,35)
-clear.Position = UDim2.new(0,10,0,210)
+clear.Position = UDim2.new(0,10,0,165)
 clear.Text = "CLEAR NPC ID"
 clear.TextScaled = true
 clear.BackgroundColor3 = Color3.fromRGB(80,40,40)
 clear.TextColor3 = Color3.new(1,1,1)
+
+-- HIDE GUI
+local hideBtn = Instance.new("TextButton", frame)
+hideBtn.Size = UDim2.new(1,-20,0,30)
+hideBtn.Position = UDim2.new(0,10,0,205)
+hideBtn.Text = "HIDE GUI"
+hideBtn.TextScaled = true
+hideBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+hideBtn.TextColor3 = Color3.new(1,1,1)
+
+-- SHOW FLOATING
+local showBtn = Instance.new("TextButton", gui)
+showBtn.Size = UDim2.new(0,80,0,35)
+showBtn.Position = UDim2.new(0,20,0.5,0)
+showBtn.Text = "SHOW"
+showBtn.TextScaled = true
+showBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+showBtn.TextColor3 = Color3.new(1,1,1)
+showBtn.Visible = false
+showBtn.Active = true
+showBtn.Draggable = true
 
 --==============================
 -- FUNCTIONS
@@ -108,15 +115,19 @@ toggleCollect.MouseButton1Click:Connect(function()
 	toggleCollect.BackgroundColor3 = enabledCollect and Color3.fromRGB(40,120,40) or Color3.fromRGB(120,40,40)
 end)
 
-toggleFly.MouseButton1Click:Connect(function()
-	enabledFly = not enabledFly
-	toggleFly.Text = enabledFly and "FLY : ON" or "FLY : OFF"
-	toggleFly.BackgroundColor3 = enabledFly and Color3.fromRGB(40,120,40) or Color3.fromRGB(120,40,40)
-end)
-
 clear.MouseButton1Click:Connect(function()
 	table.clear(NPC_IDS)
 	updateStatus()
+end)
+
+hideBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	showBtn.Visible = true
+end)
+
+showBtn.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	showBtn.Visible = false
 end)
 
 --==============================
@@ -145,24 +156,6 @@ task.spawn(function()
 				collectRemote:FireServer(i)
 			end)
 		end
-	end
-end)
-
---==============================
--- FLY LOOP
---==============================
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-
-RunService.RenderStepped:Connect(function(delta)
-	if enabledFly then
-		local cam = workspace.CurrentCamera
-		direction = Vector3.new()
-		if UIS:IsKeyDown(Enum.KeyCode.W) then direction = direction + cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then direction = direction - cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.A) then direction = direction - cam.CFrame.RightVector end
-		if UIS:IsKeyDown(Enum.KeyCode.D) then direction = direction + cam.CFrame.RightVector end
-		hrp.CFrame = hrp.CFrame + direction.Unit * speed * delta
 	end
 end)
 
