@@ -33,7 +33,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,35)
 title.BackgroundColor3 = Color3.fromRGB(20,20,20)
-title.Text = "AUTO UPGRADE NPC"
+title.Text = "AUTO UPGRADE NPC MYZOARN"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
