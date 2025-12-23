@@ -1,123 +1,162 @@
-local P = game:GetService("Players").LocalPlayer
+--==============================
+-- SERVICES
+--==============================
+local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
-local remote = RS.Remotes.Plot.UpgradeNPC
 
-local enabled = true
-local running = true
+local player = Players.LocalPlayer
+local remote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("UpgradeNPC")
 
--- ===== GUI ROOT =====
-local gui = Instance.new("ScreenGui", P.PlayerGui)
-gui.Name = "AutoUpgradeHP"
+--==============================
+-- DATA
+--==============================
+local enabled = false
+local NPC_IDS = {}
+_G.NPC_IDS = NPC_IDS
+
+--==============================
+-- GUI ROOT
+--==============================
+local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
--- ===== FLOATING BUTTON =====
-local floatBtn = Instance.new("TextButton", gui)
-floatBtn.Size = UDim2.new(0,55,0,55)
-floatBtn.Position = UDim2.new(0,20,0.5,-27)
-floatBtn.BackgroundColor3 = Color3.fromRGB(120,20,20)
-floatBtn.Text = "UP"
-floatBtn.TextScaled = true
-floatBtn.TextColor3 = Color3.new(1,1,1)
-floatBtn.BorderSizePixel = 0
-floatBtn.AutoButtonColor = true
-floatBtn.Active = true
-floatBtn.Draggable = true
-
--- bikin bulat
-local corner = Instance.new("UICorner", floatBtn)
-corner.CornerRadius = UDim.new(1,0)
-
--- ===== MAIN PANEL =====
+-- MAIN FRAME
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,240,0,160)
-frame.Position = UDim2.new(0,90,0.5,-80)
+frame.Size = UDim2.new(0,300,0,300)
+frame.Position = UDim2.new(0.5,-150,0.5,-150)
 frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.Visible = true
+frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
-frame.BorderSizePixel = 0
-
-local fc = Instance.new("UICorner", frame)
-fc.CornerRadius = UDim.new(0,12)
 
 -- TITLE
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
+title.Size = UDim2.new(1,0,0,35)
 title.BackgroundColor3 = Color3.fromRGB(20,20,20)
-title.Text = "AUTO UPGRADE (HP)"
-title.TextScaled = true
+title.Text = "AUTO UPGRADE NPC"
 title.TextColor3 = Color3.new(1,1,1)
+title.TextScaled = true
 
--- TOGGLE
+-- INFO
+local info = Instance.new("TextLabel", frame)
+info.Size = UDim2.new(1,-20,0,30)
+info.Position = UDim2.new(0,10,0,45)
+info.BackgroundTransparency = 1
+info.Text = "Upgrade NPC manual → ID auto masuk"
+info.TextColor3 = Color3.fromRGB(200,200,200)
+info.TextScaled = true
+
+-- STATUS
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1,-20,0,25)
+status.Position = UDim2.new(0,10,0,75)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.fromRGB(200,200,200)
+status.TextScaled = true
+status.Text = "Total ID: 0"
+
+-- TOGGLE AUTO
 local toggle = Instance.new("TextButton", frame)
-toggle.Size = UDim2.new(1,-20,0,40)
-toggle.Position = UDim2.new(0,10,0,45)
-toggle.Text = "STATUS : ON"
+toggle.Size = UDim2.new(1,-20,0,45)
+toggle.Position = UDim2.new(0,10,0,105)
+toggle.Text = "AUTO : OFF"
 toggle.TextScaled = true
-toggle.BackgroundColor3 = Color3.fromRGB(120,20,20)
+toggle.BackgroundColor3 = Color3.fromRGB(120,40,40)
 toggle.TextColor3 = Color3.new(1,1,1)
 
+-- CLEAR ID
+local clear = Instance.new("TextButton", frame)
+clear.Size = UDim2.new(1,-20,0,35)
+clear.Position = UDim2.new(0,10,0,155)
+clear.Text = "CLEAR ID"
+clear.TextScaled = true
+clear.BackgroundColor3 = Color3.fromRGB(80,40,40)
+clear.TextColor3 = Color3.new(1,1,1)
+
+-- HIDE GUI
+local hideBtn = Instance.new("TextButton", frame)
+hideBtn.Size = UDim2.new(1,-20,0,30)
+hideBtn.Position = UDim2.new(0,10,0,195)
+hideBtn.Text = "HIDE GUI"
+hideBtn.TextScaled = true
+hideBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+hideBtn.TextColor3 = Color3.new(1,1,1)
+
+-- SHOW FLOATING
+local showBtn = Instance.new("TextButton", gui)
+showBtn.Size = UDim2.new(0,80,0,35)
+showBtn.Position = UDim2.new(0,20,0.5,0)
+showBtn.Text = "SHOW"
+showBtn.TextScaled = true
+showBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+showBtn.TextColor3 = Color3.new(1,1,1)
+showBtn.Visible = false
+showBtn.Active = true
+showBtn.Draggable = true
+
+--==============================
+-- FUNCTIONS
+--==============================
+local function updateStatus()
+	status.Text = "Total ID: "..#NPC_IDS
+end
+
 toggle.MouseButton1Click:Connect(function()
-    enabled = not enabled
-    toggle.Text = enabled and "STATUS : ON" or "STATUS : OFF"
+	enabled = not enabled
+	toggle.Text = enabled and "AUTO : ON" or "AUTO : OFF"
+	toggle.BackgroundColor3 = enabled
+		and Color3.fromRGB(40,120,40)
+		or Color3.fromRGB(120,40,40)
 end)
 
--- EXIT
-local exit = Instance.new("TextButton", frame)
-exit.Size = UDim2.new(1,-20,0,35)
-exit.Position = UDim2.new(0,10,0,95)
-exit.Text = "EXIT SCRIPT"
-exit.TextScaled = true
-exit.BackgroundColor3 = Color3.fromRGB(150,40,40)
-exit.TextColor3 = Color3.new(1,1,1)
-
-exit.MouseButton1Click:Connect(function()
-    running = false
-    gui:Destroy()
+clear.MouseButton1Click:Connect(function()
+	table.clear(NPC_IDS)
+	updateStatus()
 end)
 
--- FLOAT BUTTON FUNCTION
-floatBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
+hideBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	showBtn.Visible = true
 end)
 
--- ===== AUTO DETECT PLOT =====
-local plot
-for _,v in pairs(workspace:GetChildren()) do
-    if v:IsA("Folder") and v:FindFirstChild(P.Name) then
-        plot = v[P.Name]
-        break
-    end
-end
-if not plot then
-    warn("PLOT TIDAK KETEMU")
-    return
-end
+showBtn.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	showBtn.Visible = false
+end)
 
--- GET NPC ID
-local function getId(npc)
-    return npc:GetAttribute("Id")
-        or npc:GetAttribute("ID")
-        or npc:GetAttribute("NpcId")
-        or npc:GetAttribute("UUID")
-        or (npc:FindFirstChild("Id") and npc.Id.Value)
-end
-
--- ===== AUTO UPGRADE LOOP =====
+--==============================
+-- AUTO UPGRADE LOOP
+--==============================
 task.spawn(function()
-    while task.wait(0.2) do
-        if not running then break end
-        if not enabled then continue end
+	while task.wait(0.1) do
+		if not enabled then continue end
+		for _,id in ipairs(NPC_IDS) do
+			if not enabled then break end
+			pcall(function()
+				remote:InvokeServer(id)
+			end)
+		end
+	end
+end)
 
-        for _,npc in ipairs(plot:GetDescendants()) do
-            if npc:IsA("Model") then
-                local id = getId(npc)
-                if id then
-                    pcall(function()
-                        remote:InvokeServer(id)
-                    end)
-                end
-            end
-        end
-    end
+--==============================
+-- REMOTE SPY (AUTO CAPTURE ID)
+--==============================
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+	local args = {...}
+	local method = getnamecallmethod()
+
+	if self == remote and method == "InvokeServer" then
+		local npcId = args[1]
+		if typeof(npcId) == "string" then
+			if not table.find(NPC_IDS, npcId) then
+				table.insert(NPC_IDS, npcId)
+				updateStatus()
+				warn("[CAPTURED NPC ID]:", npcId)
+			end
+		end
+	end
+
+	return oldNamecall(self, ...)
 end)
