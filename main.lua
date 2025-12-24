@@ -1,230 +1,178 @@
---==============================
--- SERVICES & VARIABLES
---==============================
+--[[
+    MYZOARNHUB V6 - COMPACT ENGLISH VERSION
+]]--
+
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local upgradeRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("UpgradeNPC")
 local collectRemote = RS:WaitForChild("Remotes"):WaitForChild("Plot"):WaitForChild("CollectCash")
 
--- Global Settings
 local enabledUpgrade, enabledCollect, enabledESP = false, false, false
-local flying = false
-local flySpeed = 50
-local NPC_IDS = {}
-local espObjects = {}
-
--- ESP Category Toggles (Ditambahkan showLucky)
+local flying, flySpeed = false, 50
+local NPC_IDS, espObjects = {}, {}
 local showLegendary, showMythic, showSecret, showGod, showLucky = true, true, true, true, true
 
 --==============================
--- GUI MAIN STRUCTURE
+-- GUI COMPACT STRUCTURE
 --==============================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "MyzoarnTabs_V6_CustomESP"
+gui.Name = "MyzoarnHub_V6_EN"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 430) -- Ukuran disesuaikan untuk tambahan tombol
-frame.Position = UDim2.new(0.5, -130, 0.5, -215)
-frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+frame.Size = UDim2.new(0, 210, 0, 340) 
+frame.Position = UDim2.new(0.5, -105, 0.5, -170)
+frame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
-Instance.new("UICorner", frame)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
 
--- TAB SYSTEM HEADERS
+-- TITLE
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 28)
+title.Text = "  MYZOARN HUB"
+title.TextColor3 = Color3.fromRGB(0, 255, 150)
+title.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 12
+title.TextXAlignment = Enum.TextXAlignment.Left
+Instance.new("UICorner", title)
+
+-- TABS
 local tabContainer = Instance.new("Frame", frame)
-tabContainer.Size = UDim2.new(1, 0, 0, 35)
-tabContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Instance.new("UICorner", tabContainer)
+tabContainer.Size = UDim2.new(1, -10, 0, 25)
+tabContainer.Position = UDim2.new(0, 5, 0, 33)
+tabContainer.BackgroundTransparency = 1
 
-local function createTabBtn(name, pos)
+local function createTab(name, pos)
     local btn = Instance.new("TextButton", tabContainer)
-    btn.Size = UDim2.new(0.33, -4, 1, -4)
-    btn.Position = UDim2.new(pos, 2, 0, 2)
+    btn.Size = UDim2.new(0.32, 0, 1, 0)
+    btn.Position = UDim2.new(pos, 0, 0, 0)
     btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 10
+    btn.TextSize = 9
     Instance.new("UICorner", btn)
     return btn
 end
 
-local btnFarm = createTabBtn("FARMING", 0)
-local btnMove = createTabBtn("MOVE", 0.33)
-local btnEsp = createTabBtn("ESP MENU", 0.66)
+local bF, bM, bE = createTab("FARMING", 0), createTab("MOVEMENT", 0.34), createTab("ESP MENU", 0.68)
 
--- PAGE CONTAINERS
+-- PAGES
 local pages = Instance.new("Frame", frame)
-pages.Size = UDim2.new(1, -20, 1, -50)
-pages.Position = UDim2.new(0, 10, 0, 45)
+pages.Size = UDim2.new(1, -10, 1, -75)
+pages.Position = UDim2.new(0, 5, 0, 65)
 pages.BackgroundTransparency = 1
 
 local function createPage()
-    local p = Instance.new("Frame", pages)
+    local p = Instance.new("ScrollingFrame", pages)
     p.Size = UDim2.new(1, 0, 1, 0)
     p.BackgroundTransparency = 1
+    p.ScrollBarThickness = 2
     p.Visible = false
     local list = Instance.new("UIListLayout", p)
-    list.Padding = UDim.new(0, 5)
+    list.Padding = UDim.new(0, 4)
     return p
 end
 
-local pageFarm = createPage()
-local pageMove = createPage()
-local pageEsp = createPage()
-pageFarm.Visible = true
+local pFarm, pMove, pEsp = createPage(), createPage(), createPage()
+pFarm.Visible = true
 
--- NAVIGATION
-local function showPage(target)
-    pageFarm.Visible = (target == pageFarm)
-    pageMove.Visible = (target == pageMove)
-    pageEsp.Visible = (target == pageEsp)
-end
-btnFarm.MouseButton1Click:Connect(function() showPage(pageFarm) end)
-btnMove.MouseButton1Click:Connect(function() showPage(pageMove) end)
-btnEsp.MouseButton1Click:Connect(function() showPage(pageEsp) end)
+bF.MouseButton1Click:Connect(function() pFarm.Visible = true pMove.Visible = false pEsp.Visible = false end)
+bM.MouseButton1Click:Connect(function() pFarm.Visible = false pMove.Visible = true pEsp.Visible = false end)
+bE.MouseButton1Click:Connect(function() pFarm.Visible = false pMove.Visible = false pEsp.Visible = true end)
 
--- UI HELPERS
+-- TOGGLE HELPER
 local function addToggle(parent, text, default, colorOn, callback)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Size = UDim2.new(1, -5, 0, 26)
     btn.BackgroundColor3 = default and colorOn or Color3.fromRGB(35, 35, 35)
     btn.Text = text .. (default and ": ON" or ": OFF")
     btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 10
     Instance.new("UICorner", btn)
     
-    local state = default
+    local s = default
     btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.Text = text .. (state and ": ON" or ": OFF")
-        btn.BackgroundColor3 = state and colorOn or Color3.fromRGB(35, 35, 35)
-        callback(state)
+        s = not s
+        btn.Text = text .. (s and ": ON" or ": OFF")
+        btn.BackgroundColor3 = s and colorOn or Color3.fromRGB(35, 35, 35)
+        callback(s)
         if enabledESP then refreshESP() end
     end)
-    return btn
 end
 
 --==============================
--- TAB 1: FARMING
+-- PAGE CONTENT (ENGLISH)
 --==============================
-local statusLabel = Instance.new("TextLabel", pageFarm)
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Text = "Captured IDs: 0"
-statusLabel.TextColor3 = Color3.new(0.8,0.8,0.8)
-statusLabel.BackgroundTransparency = 1
 
-local clrBtn = Instance.new("TextButton", pageFarm)
-clrBtn.Size = UDim2.new(1, 0, 0, 30)
+-- FARM PAGE
+local status = Instance.new("TextLabel", pFarm)
+status.Size = UDim2.new(1, 0, 0, 18)
+status.Text = "Captured IDs: 0"; status.TextSize = 10; status.TextColor3 = Color3.new(0.8,0.8,0.8); status.BackgroundTransparency = 1
+
+local clrBtn = Instance.new("TextButton", pFarm)
+clrBtn.Size = UDim2.new(1, -5, 0, 26)
 clrBtn.Text = "CLEAR CAPTURED DATA"
 clrBtn.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
 clrBtn.TextColor3 = Color3.new(1, 1, 1)
+clrBtn.Font = Enum.Font.GothamBold; clrBtn.TextSize = 9
 Instance.new("UICorner", clrBtn)
-clrBtn.MouseButton1Click:Connect(function() table.clear(NPC_IDS) statusLabel.Text = "Captured IDs: 0" end)
+clrBtn.MouseButton1Click:Connect(function() table.clear(NPC_IDS) status.Text = "Captured IDs: 0" end)
 
-addToggle(pageFarm, "Auto Upgrade", false, Color3.fromRGB(40, 150, 60), function(s) enabledUpgrade = s end)
-addToggle(pageFarm, "Auto Collect", false, Color3.fromRGB(40, 150, 60), function(s) enabledCollect = s end)
+addToggle(pFarm, "Auto Upgrade", false, Color3.fromRGB(40, 150, 60), function(v) enabledUpgrade = v end)
+addToggle(pFarm, "Auto Collect", false, Color3.fromRGB(40, 150, 60), function(v) enabledCollect = v end)
 
---==============================
--- TAB 2: MOVEMENT
---==============================
-addToggle(pageMove, "Fly Mode", false, Color3.fromRGB(40, 150, 60), function(s) 
-    flying = s 
-    gui.FlyControls.Visible = s
-    if s then startFly() end 
+-- MOVE PAGE
+addToggle(pMove, "Fly Mode", false, Color3.fromRGB(40, 150, 60), function(v) 
+    flying = v; gui.FlyControls.Visible = v
+    if v then startFly() end 
 end)
 
---==============================
--- TAB 3: ESP (WITH INDIVIDUAL TOGGLES)
---==============================
-addToggle(pageEsp, "MASTER ESP", false, Color3.fromRGB(100, 100, 200), function(s) 
-    enabledESP = s 
-    refreshESP() 
-end)
-
-local line = Instance.new("Frame", pageEsp)
-line.Size = UDim2.new(1, 0, 0, 2)
-line.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-line.BorderSizePixel = 0
-
-addToggle(pageEsp, "Legendary (Kuning)", true, Color3.fromRGB(180, 180, 0), function(s) showLegendary = s end)
-addToggle(pageEsp, "Mythic (Oranye)", true, Color3.fromRGB(180, 90, 0), function(s) showMythic = s end)
-addToggle(pageEsp, "Secret (Ungu)", true, Color3.fromRGB(130, 0, 180), function(s) showSecret = s end)
-addToggle(pageEsp, "God (Merah)", true, Color3.fromRGB(180, 0, 0), function(s) showGod = s end)
--- Tambahan Toggle Lucky Block
-addToggle(pageEsp, "Lucky Block (Hijau)", true, Color3.fromRGB(0, 180, 0), function(s) showLucky = s end)
+-- ESP PAGE
+addToggle(pEsp, "MASTER ESP", false, Color3.fromRGB(100, 100, 200), function(v) enabledESP = v; refreshESP() end)
+addToggle(pEsp, "Legendary (Yellow)", true, Color3.fromRGB(180, 180, 0), function(v) showLegendary = v end)
+addToggle(pEsp, "Mythic (Orange)", true, Color3.fromRGB(180, 90, 0), function(v) showMythic = v end)
+addToggle(pEsp, "Secret (Purple)", true, Color3.fromRGB(130, 0, 180), function(v) showSecret = v end)
+addToggle(pEsp, "God (Red)", true, Color3.fromRGB(180, 0, 0), function(v) showGod = v end)
+addToggle(pEsp, "Lucky Block (Green)", true, Color3.fromRGB(0, 180, 0), function(v) showLucky = v end)
 
 --==============================
--- ESP LOGIC (DIPERBARUI)
+-- LOGIC (ESP, FLY, LOOPS)
 --==============================
+
 function refreshESP()
-    for _, obj in pairs(espObjects) do
-        pcall(function() obj[1]:Destroy() obj[2]:Destroy() end)
-    end
+    for _, obj in pairs(espObjects) do pcall(function() obj[1]:Destroy() obj[2]:Destroy() end) end
     espObjects = {}
     if not enabledESP then return end
-    
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("Model") then
-            -- Deteksi apakah model itu sendiri adalah Lucky Block berdasarkan namanya
-            local modelNameLower = v.Name:lower()
-            local isLuckyModel = modelNameLower:find("lucky") or modelNameLower:find("block")
-            
+            local isL = v.Name:lower():find("lucky") or v.Name:lower():find("block")
             for _, child in pairs(v:GetDescendants()) do
-                -- Mencari teks di dalam label atau jika model terdeteksi sebagai lucky block
-                if child:IsA("TextLabel") or (isLuckyModel and child:IsA("BasePart")) then
-                    local t = child:IsA("TextLabel") and child.Text:lower() or modelNameLower
-                    local col = nil
-                    local labelText = ""
+                if child:IsA("TextLabel") or (isL and child:IsA("BasePart")) then
+                    local t = child:IsA("TextLabel") and child.Text:lower() or v.Name:lower()
+                    local col, label = nil, ""
                     
-                    -- Penentuan Kategori & Warna
-                    if t:find("god") and showGod then 
-                        col = Color3.fromRGB(255, 0, 0)
-                        labelText = child:IsA("TextLabel") and child.Text or "GOD"
-                    elseif t:find("secret") and showSecret then 
-                        col = Color3.fromRGB(170, 0, 255)
-                        labelText = child:IsA("TextLabel") and child.Text or "SECRET"
-                    elseif t:find("myth") and showMythic then 
-                        col = Color3.fromRGB(255, 120, 0)
-                        labelText = child:IsA("TextLabel") and child.Text or "MYTHIC"
-                    elseif t:find("legend") and showLegendary then 
-                        col = Color3.fromRGB(255, 255, 0)
-                        labelText = child:IsA("TextLabel") and child.Text or "LEGENDARY"
-                    elseif (t:find("lucky") or t:find("block")) and showLucky then 
-                        col = Color3.fromRGB(0, 255, 0)
-                        labelText = child:IsA("TextLabel") and child.Text or "LUCKY BLOCK"
-                    end
+                    if t:find("god") and showGod then col = Color3.new(1,0,0); label = "GOD"
+                    elseif t:find("secret") and showSecret then col = Color3.new(0.6,0,1); label = "SECRET"
+                    elseif t:find("myth") and showMythic then col = Color3.new(1,0.5,0); label = "MYTHIC"
+                    elseif t:find("legend") and showLegendary then col = Color3.new(1,1,0); label = "LEGENDARY"
+                    elseif (t:find("lucky") or t:find("block")) and showLucky then col = Color3.new(0,1,0); label = "LUCKY BLOCK" end
                     
-                    if col and (#v.Name > 20 or isLuckyModel) then
+                    if col and (#v.Name > 20 or isL) then
                         local box = Instance.new("BoxHandleAdornment", v)
-                        box.Size = v:GetExtentsSize()
-                        box.Adornee = v
-                        box.AlwaysOnTop = true
-                        box.ZIndex = 10
-                        box.Color3 = col
-                        box.Transparency = 0.5
-                        
+                        box.Size = v:GetExtentsSize(); box.Adornee = v; box.AlwaysOnTop = true; box.Color3 = col; box.Transparency = 0.6; box.ZIndex = 10
                         local bb = Instance.new("BillboardGui", v)
-                        bb.Size = UDim2.new(0,120,0,40)
-                        bb.AlwaysOnTop = true
-                        bb.StudsOffset = Vector3.new(0,5,0)
+                        bb.Size = UDim2.new(0,100,0,25); bb.AlwaysOnTop = true; bb.StudsOffset = Vector3.new(0,4,0)
                         local l = Instance.new("TextLabel", bb)
-                        l.Size = UDim2.new(1,0,1,0)
-                        l.Text = "★ " .. labelText:upper() .. " ★"
-                        l.TextColor3 = col
-                        l.Font = Enum.Font.GothamBold
-                        l.TextSize = 14
-                        l.BackgroundTransparency = 1
-                        l.TextStrokeTransparency = 0
-                        table.insert(espObjects, {box, bb})
-                        break -- Agar tidak membuat double ESP pada satu model
+                        l.Size = UDim2.new(1,0,1,0); l.Text = "★ "..label.." ★"; l.TextColor3 = col; l.Font = Enum.Font.GothamBold; l.TextSize = 10; l.BackgroundTransparency = 1; l.TextStrokeTransparency = 0
+                        table.insert(espObjects, {box, bb}); break
                     end
                 end
             end
@@ -232,115 +180,67 @@ function refreshESP()
     end
 end
 
---==============================
--- FLY CONTROLS & LOGIC
---==============================
+-- FLYING LOGIC
 local flyCtrl = Instance.new("Frame", gui)
-flyCtrl.Name = "FlyControls"
-flyCtrl.Size = UDim2.new(0, 50, 0, 110)
-flyCtrl.Position = UDim2.new(0.9, -30, 0.5, -55)
-flyCtrl.BackgroundTransparency = 1
-flyCtrl.Visible = false
-
-local function flyBtn(txt, y)
-    local b = Instance.new("TextButton", flyCtrl)
-    b.Size = UDim2.new(1, 0, 0, 50)
-    b.Position = UDim2.new(0, 0, 0, y)
-    b.Text = txt
-    b.BackgroundColor3 = Color3.new(0,0,0)
-    b.BackgroundTransparency = 0.5
-    b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", b)
-    return b
+flyCtrl.Name = "FlyControls"; flyCtrl.Size = UDim2.new(0, 40, 0, 80); flyCtrl.Position = UDim2.new(0.9, -10, 0.5, -40); flyCtrl.Visible = false
+local function fBtn(t, y)
+    local b = Instance.new("TextButton", flyCtrl); b.Size = UDim2.new(1,0,0,38); b.Position = UDim2.new(0,0,0,y); b.Text = t; b.BackgroundColor3 = Color3.new(0,0,0); b.BackgroundTransparency = 0.5; b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b); return b
 end
-local upB = flyBtn("↑", 0)
-local downB = flyBtn("↓", 60)
-local mvUp, mvDown = false, false
-upB.MouseButton1Down:Connect(function() mvUp = true end)
-upB.MouseButton1Up:Connect(function() mvUp = false end)
-downB.MouseButton1Down:Connect(function() mvDown = true end)
-downB.MouseButton1Up:Connect(function() mvDown = false end)
+local uB, dB = fBtn("↑", 0), fBtn("↓", 42)
+local mvU, mvD = false, false
+uB.MouseButton1Down:Connect(function() mvU = true end); uB.MouseButton1Up:Connect(function() mvU = false end)
+dB.MouseButton1Down:Connect(function() mvD = true end); dB.MouseButton1Up:Connect(function() mvD = false end)
 
 function startFly()
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local hum = char:WaitForChild("Humanoid")
-    local bg = Instance.new("BodyGyro", hrp)
-    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    local bv = Instance.new("BodyVelocity", hrp)
-    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    local c = player.Character or player.CharacterAdded:Wait()
+    local hrp, hum = c:WaitForChild("HumanoidRootPart"), c:WaitForChild("Humanoid")
+    local bg = Instance.new("BodyGyro", hrp); bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
+    local bv = Instance.new("BodyVelocity", hrp); bv.MaxForce = Vector3.new(9e9,9e9,9e9)
     hum.PlatformStand = true
     task.spawn(function()
-        while flying and char.Parent do
-            local dir = hum.MoveDirection
-            local v = mvUp and 1 or (mvDown and -1 or 0)
-            bv.Velocity = (dir * flySpeed) + (Vector3.new(0, v, 0) * flySpeed)
+        while flying and c.Parent do
+            bv.Velocity = (hum.MoveDirection * flySpeed) + (Vector3.new(0, (mvU and 1 or (mvD and -1 or 0)), 0) * flySpeed)
             bg.CFrame = workspace.CurrentCamera.CFrame
             RunService.RenderStepped:Wait()
         end
-        if bg then bg:Destroy() end 
-        if bv then bv:Destroy() end 
-        if hum then hum.PlatformStand = false end
+        bg:Destroy(); bv:Destroy(); hum.PlatformStand = false
     end)
 end
 
---==============================
--- LOOPS
---==============================
-task.spawn(function()
-    while task.wait(0.1) do
-        if enabledUpgrade then
-            for _, id in ipairs(NPC_IDS) do pcall(function() upgradeRemote:InvokeServer(id) end) end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(10) do
-        if enabledCollect then
-            for i = 1, 30 do pcall(function() collectRemote:FireServer(i) end) end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(5) do if enabledESP then refreshESP() end end
-end)
-
--- MINIMIZE
-local minBtn = Instance.new("TextButton", gui)
-minBtn.Size = UDim2.new(0, 50, 0, 50)
-minBtn.Position = UDim2.new(0, 10, 0.5, 0)
-minBtn.Text = "MENU"
-minBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-minBtn.TextColor3 = Color3.new(1,1,1)
-minBtn.Visible = false
-Instance.new("UICorner", minBtn, {CornerRadius = UDim.new(1, 0)})
-
-local hideMain = Instance.new("TextButton", frame)
-hideMain.Size = UDim2.new(0, 20, 0, 20)
-hideMain.Position = UDim2.new(1, -25, 0, 5)
-hideMain.Text = "-"
-hideMain.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
-hideMain.TextColor3 = Color3.new(1,1,1)
-hideMain.MouseButton1Click:Connect(function() frame.Visible = false minBtn.Visible = true end)
-minBtn.MouseButton1Click:Connect(function() frame.Visible = true minBtn.Visible = false end)
-
--- REMOTE HOOK
+-- REMOTE HOOK & TASKS
 local oldNc
 oldNc = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     if self == upgradeRemote and getnamecallmethod() == "InvokeServer" then
         if typeof(args[1]) == "string" and not table.find(NPC_IDS, args[1]) then
-            table.insert(NPC_IDS, args[1])
-            statusLabel.Text = "Captured IDs: " .. #NPC_IDS
+            table.insert(NPC_IDS, args[1]); status.Text = "Captured IDs: " .. #NPC_IDS
         end
     end
     return oldNc(self, ...)
 end)
 
--- Anti-AFK
-player.Idled:Connect(function()
-    game:GetService("VirtualUser"):CaptureController()
-    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+task.spawn(function()
+    while task.wait(0.5) do
+        if enabledUpgrade then for _, id in ipairs(NPC_IDS) do pcall(function() upgradeRemote:InvokeServer(id) end) end end
+    end
 end)
+task.spawn(function()
+    while task.wait(10) do
+        if enabledCollect then for i = 1, 30 do pcall(function() collectRemote:FireServer(i) end) end end
+    end
+end)
+task.spawn(function()
+    while task.wait(5) do if enabledESP then refreshESP() end end
+end)
+
+-- MINIMIZE SYSTEM
+local min = Instance.new("TextButton", gui)
+min.Size = UDim2.new(0, 75, 0, 28); min.Position = UDim2.new(0, 10, 0, 10); min.Text = "MYZOARN"; min.Visible = false; min.BackgroundColor3 = Color3.fromRGB(20,20,20); min.TextColor3 = Color3.new(0,1,0.6); Instance.new("UICorner", min)
+
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0, 22, 0, 22); close.Position = UDim2.new(1, -25, 0, 3); close.Text = "-"; close.BackgroundColor3 = Color3.fromRGB(100, 30, 30); close.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", close)
+
+close.MouseButton1Click:Connect(function() frame.Visible = false min.Visible = true end)
+min.MouseButton1Click:Connect(function() frame.Visible = true min.Visible = false end)
+
+player.Idled:Connect(function() game:GetService("VirtualUser"):ClickButton2(Vector2.new()) end)
